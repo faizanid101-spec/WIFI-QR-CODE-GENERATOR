@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ur">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Wi-Fi Share — QR Generator</title>
+  <style>
+    body{font-family:system-ui,Segoe UI,Roboto,Arial;margin:20px;background:#f6f9fc;color:#0b1220}
+    .card{max-width:680px;margin:18px auto;padding:18px;border-radius:10px;background:#fff;box-shadow:0 6px 20px rgba(11,18,32,0.08)}
+    h1{margin:0 0 8px;font-size:20px}
+    label{display:block;margin-top:10px;font-size:14px;color:#374151}
+    input, select{width:100%;padding:10px;margin-top:6px;border:1px solid #e6eef6;border-radius:8px}
+    .row{display:flex;gap:10px}
+    .col{flex:1}
+    button{margin-top:12px;padding:10px 14px;border-radius:8px;border:none;background:#0ea5a4;color:white;cursor:pointer}
+    #qrcode{margin-top:16px;display:flex;justify-content:center;align-items:center}
+    p.hint{font-size:13px;color:#6b7280;margin-top:6px}
+    .small{font-size:13px;color:#6b7280}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Wi-Fi Share — QR Code Generator</h1>
+    <p class="small">Apna Wi-Fi SSID (network name) aur password daalein — QR create karein jo guests scan karke connect ho sakein.</p>
+
+<label>SSID (Network Name)</label>
+    <input id="ssid" placeholder="Example: MyCafeWiFi" />
+
+    <label>Password (leave empty if open network)</label>
+    <input id="pass" placeholder="Your Wi-Fi password" />
+
+    <label>Encryption</label>
+    <select id="enc">
+      <option value="WPA">WPA/WPA2</option>
+      <option value="WEP">WEP</option>
+      <option value="nopass">Open (no password)</option>
+    </select>
+
+    <div style="display:flex;gap:8px">
+      <button id="gen">Generate QR</button>
+      <button id="clear" style="background:#64748b">Clear</button>
+      <button id="download" style="background:#334155">Download PNG</button>
+    </div>
+
+    <div id="qrcode"></div>
+    <p class="hint">QR scan karne par phone Wi-Fi settings mein "Join network" prompt aata hai (zyada phones mein yeh feature hota hai).</p>
+  </div>
+<!-- QRCode.js from CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    const qroot = document.getElementById('qrcode');
+    let qr = null;
+    function buildPayload(ssid, pass, enc){
+      // Format: WIFI:T:WPA;S:SSID;P:password;;  (escape ; , : and \ if necessary)
+      function esc(s){ return String(s).replace(/([\\;,:"])/g,'\\$1'); }
+      if(enc === 'nopass') return 'WIFI:T:nopass;S:' + esc(ssid) + ';;';
+      return 'WIFI:T:' + enc + ';S:' + esc(ssid) + ';P:' + esc(pass) + ';;';
+    }
+    document.getElementById('gen').addEventListener('click', ()=>{
+      const ssid = document.getElementById('ssid').value.trim();
+      const pass = document.getElementById('pass').value;
+      const enc = document.getElementById('enc').value;
+      if(!ssid){ alert('SSID zaroori hai'); return; }
+      const payload = buildPayload(ssid, pass, enc);
+      qroot.innerHTML = '';
+      qr = new QRCode(qroot, { text: payload, width: 240, height: 240, correctLevel: QRCode.CorrectLevel.H });
+    });
+    document.getElementById('clear').addEventListener('click', ()=>{
+      document.getElementById('ssid').value=''; document.getElementById('pass').value=''; document.getElementById('enc').value='WPA';
+      qroot.innerHTML = '';
+      qr = null;
+    });
+ document.getElementById('download').addEventListener('click', ()=>{
+      // find the generated <img> or <canvas> inside qroot
+      if(!qroot.firstChild){ alert('Pehle QR generate karo'); return; }
+      // QRCode.js may produce <img> or <canvas>
+      const node = qroot.querySelector('img') || qroot.querySelector('canvas');
+      if(!node){ alert('Download supported nahi hai for this QR type'); return; }
+      let dataURL;
+      if(node.tagName.toLowerCase() === 'img') dataURL = node.src;
+      else dataURL = node.toDataURL('image/png');
+      // create link and click
+      const a = document.createElement('a');
+      a.href = dataURL;
+      a.download = (document.getElementById('ssid').value || 'wifi') + '_qr.png';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+  </script>
+</body>
+</html>
